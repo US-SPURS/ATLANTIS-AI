@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🤖 AI Collaboration Documentation
+    url: https://github.com/us-spurs/ai-hub/blob/main/docs/AI_COLLABORATION_GUIDE.md
+    about: Learn how to effectively collaborate with multiple AI systems
+  - name: 📊 Project Dashboard
+    url: https://github.com/us-spurs/ai-hub/projects/1
+    about: View current AI tasks and project status
+  - name: 🆘 Emergency Support
+    url: https://spurs.gov/support
+    about: Contact US-SPURS technical support team
