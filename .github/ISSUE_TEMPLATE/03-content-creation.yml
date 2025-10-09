@@ -1,0 +1,243 @@
+name: ✍️ Content Creation Request
+description: Request AI assistance for documentation, articles, guides, or other written content
+title: "[CONTENT] "
+labels: ["ai:chatgpt", "type:content", "status:intake", "priority:normal"]
+assignees: []
+projects: ["us-spurs/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📝 AI Content Creation System
+        This template routes your request to ChatGPT (primary) for content generation.
+        
+        **Best for:** Documentation, user guides, blog posts, API docs, training materials
+
+  - type: dropdown
+    id: content_type
+    attributes:
+      label: Content Type
+      description: What type of content do you need?
+      options:
+        - Technical Documentation
+        - API Documentation
+        - User Guide / Manual
+        - Tutorial / How-To Guide
+        - Blog Post / Article
+        - README File
+        - Training Materials
+        - Policy Document
+        - Press Release
+        - Marketing Copy
+        - Email Template
+        - Presentation Content
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ai_assignment
+    attributes:
+      label: AI Assignment
+      description: Which AI should create this content?
+      options:
+        - "@chatgpt - ChatGPT (recommended for most content)"
+        - "@claude - Claude (for highly technical content)"
+        - "@multi - Multiple AIs (for review and refinement)"
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: title
+    attributes:
+      label: Content Title
+      description: Working title for this content piece
+      placeholder: "Getting Started with US-SPURS Incident Response API"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_audience
+    attributes:
+      label: Target Audience
+      description: Who is this content for?
+      options:
+        - Technical Developers
+        - System Administrators
+        - End Users (Non-Technical)
+        - Executive Leadership
+        - Government Officials
+        - General Public
+        - Internal Staff Only
+        - Mixed Audience
+    validations:
+      required: true
+
+  - type: dropdown
+    id: technical_level
+    attributes:
+      label: Technical Complexity Level
+      description: How technical should the content be?
+      options:
+        - "Beginner - No technical knowledge assumed"
+        - "Intermediate - Basic technical understanding assumed"
+        - "Advanced - Expert-level technical content"
+        - "Mixed - Multiple skill levels addressed"
+    validations:
+      required: true
+
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Content Purpose & Goals
+      description: What should this content accomplish?
+      placeholder: |
+        Examples:
+        - Help developers integrate with our API in under 30 minutes
+        - Explain new incident reporting workflow to field agents
+        - Convince stakeholders to approve budget for new system
+        - Train new employees on emergency response procedures
+    validations:
+      required: true
+
+  - type: textarea
+    id: key_points
+    attributes:
+      label: Key Points to Cover
+      description: Main topics, sections, or messages to include
+      placeholder: |
+        List the main points or outline:
+        1. Introduction to US-SPURS mission
+        2. Overview of incident response workflow
+        3. Step-by-step API integration guide
+        4. Authentication and security best practices
+        5. Common troubleshooting scenarios
+        6. Additional resources and support
+    validations:
+      required: true
+
+  - type: textarea
+    id: source_material
+    attributes:
+      label: Source Material & References
+      description: Provide existing content, links, or resources to reference
+      placeholder: |
+        Include:
+        - Links to related documentation
+        - Existing content to update/expand
+        - Technical specifications
+        - Code examples to document
+        - Style guides to follow
+      render: markdown
+
+  - type: input
+    id: word_count
+    attributes:
+      label: Target Word Count
+      description: Approximate length needed (or range)
+      placeholder: "1500-2000 words"
+
+  - type: dropdown
+    id: tone
+    attributes:
+      label: Tone & Style
+      description: What tone should the content have?
+      options:
+        - Professional & Formal
+        - Professional & Conversational
+        - Technical & Precise
+        - Friendly & Approachable
+        - Authoritative & Official
+        - Educational & Supportive
+    validations:
+      required: true
+
+  - type: textarea
+    id: style_requirements
+    attributes:
+      label: Style & Formatting Requirements
+      description: Specific style guidelines, formatting needs, or branding requirements
+      placeholder: |
+        Examples:
+        - Follow US-SPURS brand voice guidelines (link)
+        - Use Markdown formatting with code blocks
+        - Include screenshots/diagrams (specify where)
+        - Follow AP Style for government communications
+        - Maximum heading depth: H3
+        - Include table of contents for docs >1000 words
+
+  - type: checkboxes
+    id: required_elements
+    attributes:
+      label: Required Content Elements
+      description: Check all elements that must be included
+      options:
+        - label: "Table of Contents"
+        - label: "Executive Summary"
+        - label: "Code Examples"
+        - label: "Screenshots or Diagrams"
+        - label: "API Reference Tables"
+        - label: "Troubleshooting Section"
+        - label: "FAQ Section"
+        - label: "Related Resources / Links"
+        - label: "Glossary of Terms"
+        - label: "Version History / Changelog"
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or Templates
+      description: Provide examples of similar content or templates to follow
+      placeholder: |
+        Links to similar content:
+        - https://example.com/similar-guide
+        - Internal template: docs/templates/api-guide-template.md
+      render: markdown
+
+  - type: dropdown
+    id: review_process
+    attributes:
+      label: Review Process
+      description: What review is needed after AI generation?
+      options:
+        - "AI-only review (@claude reviews @chatgpt output)"
+        - "Human review only"
+        - "Both AI and human review"
+        - "No review needed (publish as-is)"
+      default: 2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      options:
+        - "🔴 Critical - Urgent publication needed"
+        - "🟠 High - Needed soon"
+        - "🟡 Normal - Standard timeline"
+        - "🟢 Low - When available"
+      default: 2
+    validations:
+      required: true
+
+  - type: input
+    id: deadline
+    attributes:
+      label: Needed By Date
+      description: When do you need this content? (YYYY-MM-DD)
+      placeholder: "2025-10-25"
+
+  - type: textarea
+    id: seo_keywords
+    attributes:
+      label: SEO Keywords (if applicable)
+      description: Keywords to optimize for search engines
+      placeholder: "incident response, emergency management API, SPURS integration"
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Additional Notes
+      description: Any other requirements or context
