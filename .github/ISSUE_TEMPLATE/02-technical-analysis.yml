@@ -1,0 +1,193 @@
+name: 🔬 Technical Analysis & Research
+description: Request deep technical analysis, architecture review, or research from AI systems
+title: "[ANALYSIS] "
+labels: ["ai:claude", "type:analysis", "status:intake", "priority:normal"]
+assignees: []
+projects: ["us-spurs/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧠 AI Technical Analysis System
+        This template routes your request to Claude (primary) for deep technical analysis.
+        
+        **Best for:** Architecture decisions, algorithm analysis, security reviews, performance optimization
+
+  - type: dropdown
+    id: analysis_type
+    attributes:
+      label: Analysis Type
+      description: What kind of analysis do you need?
+      options:
+        - Architecture Review
+        - Algorithm Analysis & Optimization
+        - Security Audit
+        - Performance Analysis
+        - Code Quality Assessment
+        - Technology Stack Evaluation
+        - Database Schema Review
+        - API Design Review
+        - Scalability Analysis
+        - Technical Debt Assessment
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ai_assignment
+    attributes:
+      label: AI Assignment
+      description: Which AI should perform this analysis?
+      options:
+        - "@claude - Claude (recommended for deep analysis)"
+        - "@chatgpt - ChatGPT (alternative perspective)"
+        - "@multi - Multiple AIs (comprehensive review)"
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: subject
+    attributes:
+      label: Analysis Subject
+      description: What system, code, or architecture needs analysis?
+      placeholder: |
+        Example:
+        - Current microservices architecture for US-SPURS incident response system
+        - Authentication flow in the public portal
+        - Database query performance in reporting module
+        - Proposed migration from monolith to microservices
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_state
+    attributes:
+      label: Current State Description
+      description: Detailed description of the current implementation or situation
+      placeholder: |
+        Provide:
+        - Architecture diagrams (links or ASCII)
+        - Current code structure
+        - Performance metrics
+        - Known issues or pain points
+        - Technology stack details
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: specific_concerns
+    attributes:
+      label: Specific Concerns or Questions
+      description: What specific aspects need analysis?
+      placeholder: |
+        Examples:
+        - Is our current caching strategy optimal for our traffic patterns?
+        - Will this architecture scale to 10x current load?
+        - Are there security vulnerabilities in our authentication flow?
+        - Should we use GraphQL or REST for this use case?
+        - What are the trade-offs between these two approaches?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context_data
+    attributes:
+      label: Context & Supporting Data
+      description: Provide metrics, logs, diagrams, or other supporting information
+      placeholder: |
+        Include:
+        - Performance metrics (response times, throughput, etc.)
+        - Error logs or stack traces
+        - User load patterns
+        - Budget constraints
+        - Timeline constraints
+        - Compliance requirements
+      render: markdown
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints & Requirements
+      description: Technical, business, or regulatory constraints
+      placeholder: |
+        Examples:
+        - Must comply with FedRAMP requirements
+        - Budget limit: $50,000 for infrastructure changes
+        - Must maintain 99.9% uptime during migration
+        - Cannot change database vendor
+        - Must support legacy API for 12 months
+    validations:
+      required: true
+
+  - type: dropdown
+    id: depth_level
+    attributes:
+      label: Analysis Depth Required
+      description: How comprehensive should the analysis be?
+      options:
+        - "Quick Assessment (high-level overview, 1-2 hours)"
+        - "Standard Analysis (detailed review, 4-8 hours)"
+        - "Comprehensive Analysis (deep dive with alternatives, 1-2 days)"
+        - "Full Research Project (extensive research with POCs, 1+ weeks)"
+      default: 1
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: deliverables
+    attributes:
+      label: Expected Deliverables
+      description: What outputs do you need from this analysis?
+      options:
+        - label: "Written analysis report with findings"
+          required: true
+        - label: "Recommendations with pros/cons for each option"
+        - label: "Architecture diagrams (if applicable)"
+        - label: "Code examples or proof-of-concept"
+        - label: "Performance benchmarks or projections"
+        - label: "Security assessment checklist"
+        - label: "Implementation roadmap"
+        - label: "Cost-benefit analysis"
+        - label: "Risk assessment matrix"
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      options:
+        - "🔴 Critical - Blocking major decision"
+        - "🟠 High - Needed for planning"
+        - "🟡 Normal - Standard research"
+        - "🟢 Low - Nice to have"
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: success_criteria
+    attributes:
+      label: Success Criteria
+      description: How will you know this analysis is complete and useful?
+      placeholder: |
+        - [ ] Clear recommendation provided with justification
+        - [ ] All concerns addressed
+        - [ ] Alternative approaches evaluated
+        - [ ] Implementation complexity assessed
+        - [ ] Risk factors identified and mitigated
+    validations:
+      required: true
+
+  - type: input
+    id: deadline
+    attributes:
+      label: Needed By Date
+      description: When do you need this analysis? (YYYY-MM-DD)
+      placeholder: "2025-10-20"
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other information that would help the AI provide better analysis
