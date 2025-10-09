@@ -1,0 +1,150 @@
+name: 👀 Code Review Request
+description: Request AI-powered code review for quality, security, performance, and best practices
+title: "[REVIEW] "
+labels: ["ai:multi", "type:code-review", "status:intake", "priority:normal"]
+assignees: []
+projects: ["us-spurs/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔍 AI Code Review System
+        This template engages multiple AI systems for comprehensive code review.
+        
+        **Review Team:** @copilot (patterns), @claude (logic/security), @chatgpt (documentation)
+
+  - type: dropdown
+    id: review_type
+    attributes:
+      label: Review Type
+      description: What kind of review do you need?
+      options:
+        - "Full Code Review (all aspects)"
+        - "Security-Focused Review"
+        - "Performance Optimization Review"
+        - "Code Quality & Best Practices"
+        - "Architecture & Design Patterns"
+        - "Pre-Merge Review (PR review)"
+        - "Legacy Code Assessment"
+        - "Refactoring Recommendations"
+    validations:
+      required: true
+
+  - type: input
+    id: pull_request
+    attributes:
+      label: Pull Request Number (if applicable)
+      description: Link to PR or enter PR number
+      placeholder: "#123 or https://github.com/us-spurs/repo/pull/123"
+
+  - type: textarea
+    id: code_location
+    attributes:
+      label: Code Location
+      description: Where is the code to review?
+      placeholder: |
+        Provide:
+        - File paths: src/api/auth/middleware.js
+        - Branch name: feature/new-auth-system
+        - Commit hash: abc123def456
+        - Or paste code below (for small snippets)
+    validations:
+      required: true
+
+  - type: textarea
+    id: code_snippet
+    attributes:
+      label: Code to Review (if not in PR)
+      description: Paste code here if not reviewing a PR
+      placeholder: "Paste your code here..."
+      render: javascript
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Code Context & Purpose
+      description: What does this code do? Why was it written this way?
+      placeholder: |
+        Explain:
+        - What problem this code solves
+        - Why certain approaches were chosen
+        - Any known limitations or trade-offs
+        - Dependencies or related systems
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: review_focus
+    attributes:
+      label: Review Focus Areas
+      description: What should the AI reviewers focus on?
+      options:
+        - label: "🔒 Security vulnerabilities and attack vectors"
+          required: false
+        - label: "⚡ Performance and optimization opportunities"
+          required: false
+        - label: "🏗️ Architecture and design patterns"
+          required: false
+        - label: "🧹 Code quality and maintainability"
+          required: false
+        - label: "📚 Documentation and code comments"
+          required: false
+        - label: "🧪 Test coverage and quality"
+          required: false
+        - label: "♿ Accessibility compliance"
+          required: false
+        - label: "🌐 Internationalization (i18n) readiness"
+          required: false
+        - label: "📏 Compliance with coding standards"
+          required: false
+        - label: "🐛 Bug detection and edge cases"
+          required: false
+
+  - type: textarea
+    id: specific_concerns
+    attributes:
+      label: Specific Concerns or Questions
+      description: Are there specific areas you're uncertain about?
+      placeholder: |
+        Examples:
+        - Is this the most efficient way to handle large datasets?
+        - Are there any SQL injection vulnerabilities?
+        - Should I use async/await here or callbacks?
+        - Is this error handling approach correct?
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Programming Language
+      options:
+        - JavaScript/TypeScript
+        - Python
+        - Java
+        - C#
+        - Go
+        - Rust
+        - PHP
+        - Ruby
+        - Swift
+        - Kotlin
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: framework
+    attributes:
+      label: Framework/Library
+      description: What framework or major libraries are used?
+      placeholder: "React 18, Express.js, Django, Spring Boot, etc."
+
+  - type: textarea
+    id: coding_standards
+    attributes:
+      label: Coding Standards & Style Guide
+      description: What standards should this code follow?
+      placeholder: |
+        Examples:
+        - ESLint config: airbnb
+        - PEP 8 for Python
+        - Company style
