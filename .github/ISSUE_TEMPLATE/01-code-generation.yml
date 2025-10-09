@@ -1,0 +1,201 @@
+name: 🔨 Code Generation Request
+description: Request AI assistance for generating new code, functions, or modules
+title: "[CODE-GEN] "
+labels: ["ai:copilot", "type:code-generation", "status:intake", "priority:normal"]
+assignees: []
+projects: ["us-spurs/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🤖 AI Code Generation System
+        This template routes your request to GitHub Copilot and other coding-specialized AIs.
+        
+        **Supported AIs:** @copilot (primary), @claude (complex logic), @chatgpt (boilerplate)
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Programming Language
+      description: Select the primary language for this code generation task
+      options:
+        - JavaScript/TypeScript
+        - Python
+        - Java
+        - C#
+        - Go
+        - Rust
+        - PHP
+        - Ruby
+        - Swift
+        - Kotlin
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Code Complexity Level
+      description: Helps route to appropriate AI system
+      options:
+        - Simple (single function, <50 lines)
+        - Moderate (multiple functions, 50-200 lines)
+        - Complex (full module, 200-500 lines)
+        - Advanced (multiple modules, 500+ lines, architecture required)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ai_preference
+    attributes:
+      label: Preferred AI System
+      description: Which AI should handle this task?
+      options:
+        - "@copilot - GitHub Copilot (best for standard patterns)"
+        - "@claude - Claude (best for complex logic & algorithms)"
+        - "@chatgpt - ChatGPT (best for rapid prototyping)"
+        - "@multi - Multiple AIs (collaborative approach)"
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Functional Requirements
+      description: Detailed description of what the code should do
+      placeholder: |
+        Example:
+        - Create a REST API endpoint that validates user authentication
+        - Must support JWT token validation
+        - Should return 401 for invalid tokens
+        - Must log all authentication attempts
+        - Should integrate with existing user database
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_specs
+    attributes:
+      label: Technical Specifications
+      description: Framework, libraries, patterns, and technical constraints
+      placeholder: |
+        Example:
+        - Framework: Express.js 4.18+
+        - Database: PostgreSQL with Prisma ORM
+        - Authentication: JWT with RS256 signing
+        - Must follow existing error handling patterns
+        - Code style: Airbnb ESLint config
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Existing Code Context
+      description: Provide relevant existing code, file paths, or repository structure
+      placeholder: |
+        Paste existing code here or provide file paths:
+        - src/middleware/auth.js (existing auth middleware)
+        - src/models/User.js (user model)
+        - src/utils/jwt.js (JWT utilities)
+      render: markdown
+
+  - type: textarea
+    id: input_output
+    attributes:
+      label: Expected Input/Output
+      description: Define expected inputs and outputs with examples
+      placeholder: |
+        **Input:**
+        ```json
+        {
+          "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "userId": "usr_123456"
+        }
+        ```
+        
+        **Output (Success):**
+        ```json
+        {
+          "valid": true,
+          "user": { "id": "usr_123456", "email": "user@example.com" }
+        }
+        ```
+        
+        **Output (Failure):**
+        ```json
+        {
+          "valid": false,
+          "error": "Token expired"
+        }
+        ```
+      render: markdown
+
+  - type: textarea
+    id: test_requirements
+    attributes:
+      label: Testing Requirements
+      description: Specify required tests and coverage expectations
+      placeholder: |
+        - Unit tests for all public functions
+        - Integration tests for API endpoints
+        - Minimum 80% code coverage
+        - Test framework: Jest
+        - Mock external dependencies
+      render: markdown
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      options:
+        - "🔴 Critical - Blocking production issue"
+        - "🟠 High - Required for upcoming release"
+        - "🟡 Normal - Standard development task"
+        - "🟢 Low - Enhancement or optimization"
+      default: 2
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: additional_services
+    attributes:
+      label: Additional AI Services Requested
+      description: Select additional AI assistance needed
+      options:
+        - label: "@claude - Code review after generation"
+        - label: "@chatgpt - Generate comprehensive documentation"
+        - label: "@copilot - Generate unit tests"
+        - label: "Security vulnerability analysis"
+        - label: "Performance optimization recommendations"
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Define what "done" looks like for this task
+      placeholder: |
+        - [ ] Code passes all linting rules
+        - [ ] All unit tests pass with >80% coverage
+        - [ ] Integration tests demonstrate functionality
+        - [ ] Code reviewed by @claude
+        - [ ] Documentation generated and reviewed
+        - [ ] No security vulnerabilities detected
+    validations:
+      required: true
+
+  - type: input
+    id: deadline
+    attributes:
+      label: Target Completion Date
+      description: When do you need this completed? (YYYY-MM-DD)
+      placeholder: "2025-10-15"
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Additional Notes
+      description: Any other information the AI systems should know
+      placeholder: "Special considerations, dependencies, related issues, etc."
