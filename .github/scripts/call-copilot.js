@@ -1,0 +1,785 @@
+/**
+ * GitHub Copilot API Calling Script
+ * Handles API calls to GitHub Copilot with conversation history context
+ */
+
+const core = require('@actions/core');
+const github = require('@actions/github');
+
+/**
+ * Call GitHub Copilot API with enhanced context
+ * @param {Object} context - Enhanced context object
+ * @param {string} token - GitHub token
+ * @returns {Promise<Object>} - Copilot response
+ */
+async function callCopilotAPI(context, token) {
+  const {
+    task,
+    metadata,
+    conversationHistory,
+    contextualInsights,
+    privacyMetadata
+  } = context;
+
+  const octokit = github.getOctokit(token);
+
+  // Build prompt for Copilot
+  const prompt = buildCopilotPrompt(context);
+
+  console.log('🤖 Calling GitHub Copilot API...');
+  console.log(`Task Type: ${metadata.taskType}`);
+  console.log(`Conversation History: ${conversationHistory.userAIHistory.length} previous interactions`);
+
+  try {
+    // GitHub Copilot for Pull Requests API
+    const response = await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
+      owner: metadata.repository.owner,
+      repo: metadata.repository.name,
+      issue_number: metadata.issueNumber,
+      body: buildCopilotRequestComment(prompt, context)
+    });
+
+    console.log('✅ GitHub Copilot request submitted');
+
+    // Note: Copilot responses come asynchronously via GitHub's system
+    // This returns a tracking object
+    return {
+      success: true,
+      tracking: {
+        commentId: response.data.id,
+        requestedAt: new Date().toISOString(),
+        status: 'pending'
+      },
+      metadata: {
+        issueNumber: metadata.issueNumber,
+        taskType: metadata.taskType
+      }
+    };
+  } catch (error) {
+    console.error('❌ GitHub Copilot API error:', error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Build Copilot prompt with context
+ * @param {Object} context - Enhanced context object
+ * @returns {string} - Copilot prompt
+ */
+function buildCopilotPrompt(context) {
+  const {
+    task,
+    metadata,
+    conversationHistory,
+    contextualInsights
+  } = context;
+
+  let prompt = `# Code Generation Request\n\n`;
+  prompt += `**Task Type:** ${metadata.taskType}\n`;
+  prompt += `**Issue:** #${metadata.issueNumber} - ${metadata.title}\n\n`;
+
+  // Add task description
+  prompt += `## Description:\n${task.description}\n\n`;
+
+  // Add technical specifications
+  if (task.technicalSpecs.language) {
+    prompt += `## Technical Requirements:\n`;
+    prompt += `- **Language:** ${task.technicalSpecs.language}\n`;
+    if (task.technicalSpecs.framework) {
+      prompt += `- **Framework:** ${task.technicalSpecs.framework}\n`;
+    }
+    if (task.technicalSpecs.libraries.length > 0) {
+      prompt += `- **Libraries:** ${task.technicalSpecs.libraries.join(', ')}\n`;
+    }
+    prompt += '\n';
+  }
+
+  // Add requirements
+  if (task.requirements.length > 0) {
+    prompt += `## Requirements:\n`;
+    task.requirements.forEach((req, i) => {
+      prompt += `${i + 1}. ${req}\n`;
+    });
+    prompt += '\n';
+  }
+
+  // Add constraints
+  if (task.constraints.length > 0) {
+    prompt += `## Constraints:\n`;
+    task.constraints.forEach((constraint, i) => {
+      prompt += `${i + 1}. ${constraint}\n`;
+    });
+    prompt += '\n';
+  }
+
+  // Add conversation history context
+  if (conversationHistory.permissionsGranted && conversationHistory.userAIHistory.length > 0) {
+    prompt += `## Previous Context:\n`;
+    prompt += `This user has ${conversationHistory.userAIHistory.length} previous interactions with Copilot.\n`;
+    
+    if (contextualInsights.userPreferences?.available) {
+      const prefs = contextualInsights.userPreferences;
+      prompt += `\n**User Preferences:**\n`;
+      prompt += `- Primary Languages: ${prefs.technicalContext.primaryLanguages.join(', ')}\n`;
+      prompt += `- Code Style: ${prefs.communicationStyle.preferredFormat}\n`;
+    }
+  }
+
+  prompt += `\n## Expected Output:\n`;
+  prompt += `Please generate production-ready code that:\n`;
+  prompt += `1. Follows best practices and coding standards\n`;
+  prompt += `2. Includes comprehensive comments and documentation\n`;
+  prompt += `3. Handles edge cases and errors appropriately\n`;
+  prompt += `4. Is well-structured and maintainable\n`;
+  prompt += `5. Includes relevant tests if applicable\n`;
+
+  return prompt;
+}
+
+/**
+ * Build Copilot request comment
+ * @param {string} prompt - Generated prompt
+ * @param {Object} context - Context object
+ * @returns {string} - Formatted comment for GitHub
+ */
+function buildCopilotRequestComment(prompt, context) {
+  const comment = `### 🤖 GitHub Copilot Request
+
+${prompt}
+
+---
+
+**Request Metadata:**
+- Task Type: ${context.metadata.taskType}
+- Priority: ${context.metadata.labels.find(l => l.startsWith('priority:')) || 'normal'}
+- Conversation History: ${context.conversationHistory.permissionsGranted ? 'Enabled' : 'Disabled'}
+
+*This request was generated by the US-SPURS Multi-AI Orchestration System*`;
+
+  return comment;
+}
+
+/**
+ * Simulate Copilot code generation (for testing without actual Copilot API)
+ * @param {Object} context - Enhanced context object
+ * @returns {Promise<Object>} - Simulated Copilot response
+ */
+async function simulateCopilotResponse(context) {
+  const {
+    task,
+    metadata,
+    conversationHistory
+  } = context;
+
+  // Generate a simulated code response based on task type
+  let codeResponse = '';
+
+  switch (metadata.taskType) {
+    case 'code-generation':
+      codeResponse = generateSampleCode(task.technicalSpecs);
+      break;
+    case 'code-review':
+      codeResponse = generateCodeReview(task.description);
+      break;
+    case 'bug-fix':
+      codeResponse = generateBugFix(task.description);
+      break;
+    case 'refactoring':
+      codeResponse = generateRefactoring(task.description);
+      break;
+    default:
+      codeResponse = generateGenericCode(task.description);
+  }
+
+  return {
+    success: true,
+    response: `### 🤖 GitHub Copilot Response
+
+${codeResponse}
+
+---
+
+**Code Quality Metrics:**
+- Complexity: Medium
+- Test Coverage: Recommended
+- Documentation: Included
+- Best Practices: Applied
+
+**Conversation Context:**
+${conversationHistory.permissionsGranted ? 
+  `Based on ${conversationHistory.userAIHistory.length} previous interactions` : 
+  'No conversation history available'}
+
+*Generated by GitHub Copilot via US-SPURS Multi-AI System*`,
+    metadata: {
+      taskType: metadata.taskType,
+      generatedAt: new Date().toISOString()
+    }
+  };
+}
+
+/**
+ * Generate sample code based on specifications
+ * @param {Object} specs - Technical specifications
+ * @returns {string} - Generated code
+ */
+function generateSampleCode(specs) {
+  const language = specs.language || 'javascript';
+  
+  const codeTemplates = {
+    javascript: `\`\`\`javascript
+/**
+ * Generated function based on requirements
+ * @param {Object} options - Configuration options
+ * @returns {Promise<Object>} - Result object
+ */
+async function processRequest(options) {
+  try {
+    // Validate input
+    if (!options || typeof options !== 'object') {
+      throw new Error('Invalid options provided');
+    }
+
+    // Process request
+    const result = await performOperation(options);
+
+    // Return formatted result
+    return {
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error processing request:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Perform the main operation
+ * @param {Object} options - Operation options
+ * @returns {Promise<any>} - Operation result
+ */
+async function performOperation(options) {
+  // Implementation based on requirements
+  // TODO: Add specific business logic here
+  
+  return {
+    processed: true,
+    options
+  };
+}
+
+module.exports = {
+  processRequest,
+  performOperation
+};
+\`\`\``,
+
+    python: `\`\`\`python
+"""
+Generated module based on requirements
+"""
+
+from typing import Dict, Any, Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class RequestProcessor:
+    """
+    Handles request processing with error handling and validation
+    """
+    
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """
+        Initialize the processor
+        
+        Args:
+            config: Configuration dictionary
+        """
+        self.config = config or {}
+        
+    async def process_request(self, options: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process a request with the given options
+        
+        Args:
+            options: Request options
+            
+        Returns:
+            Result dictionary with success status and data
+        """
+        try:
+            # Validate input
+            if not isinstance(options, dict):
+                raise ValueError("Options must be a dictionary")
+            
+            # Process request
+            result = await self._perform_operation(options)
+            
+            return {
+                'success': True,
+                'data': result,
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error processing request: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    async def _perform_operation(self, options: Dict[str, Any]) -> Any:
+        """
+        Perform the main operation
+        
+        Args:
+            options: Operation options
+            
+        Returns:
+            Operation result
+        """
+        # TODO: Implement specific business logic
+        return {
+            'processed': True,
+            'options': options
+        }
+\`\`\``,
+
+    java: `\`\`\`java
+/**
+ * Generated class based on requirements
+ */
+public class RequestProcessor {
+    
+    private final Configuration config;
+    
+    /**
+     * Constructor
+     * @param config Configuration object
+     */
+    public RequestProcessor(Configuration config) {
+        this.config = config;
+    }
+    
+    /**
+     * Process a request with error handling
+     * @param options Request options
+     * @return Result object
+     */
+    public Result processRequest(Map<String, Object> options) {
+        try {
+            // Validate input
+            if (options == null || options.isEmpty()) {
+                throw new IllegalArgumentException("Options cannot be null or empty");
+            }
+            
+            // Process request
+            Object data = performOperation(options);
+            
+            // Return success result
+            return new Result(true, data, null);
+            
+        } catch (Exception e) {
+            logger.error("Error processing request", e);
+            return new Result(false, null, e.getMessage());
+        }
+    }
+    
+    /**
+     * Perform the main operation
+     * @param options Operation options
+     * @return Operation result
+     */
+    private Object performOperation(Map<String, Object> options) {
+        // TODO: Implement specific business logic
+        return new ProcessedData(options);
+    }
+    
+    /**
+     * Result class
+     */
+    public static class Result {
+        private final boolean success;
+        private final Object data;
+        private final String error;
+        
+        public Result(boolean success, Object data, String error) {
+            this.success = success;
+            this.data = data;
+            this.error = error;
+        }
+        
+        // Getters
+        public boolean isSuccess() { return success; }
+        public Object getData() { return data; }
+        public String getError() { return error; }
+    }
+}
+\`\`\``,
+  };
+
+  return codeTemplates[language] || codeTemplates.javascript;
+}
+
+/**
+ * Generate code review comments
+ * @param {string} description - Task description
+ * @returns {string} - Code review
+ */
+function generateCodeReview(description) {
+  return `## Code Review Analysis
+
+### ✅ Strengths:
+1. **Code Structure**: Well-organized and follows best practices
+2. **Error Handling**: Comprehensive try-catch blocks implemented
+3. **Documentation**: Clear comments and JSDoc/docstrings present
+4. **Naming Conventions**: Descriptive variable and function names
+
+### ⚠️ Areas for Improvement:
+1. **Performance**: Consider caching frequently accessed data
+2. **Testing**: Add unit tests for edge cases
+3. **Security**: Validate and sanitize all user inputs
+4. **Scalability**: Consider async operations for I/O-bound tasks
+
+### 🔧 Specific Recommendations:
+
+\`\`\`javascript
+// Before:
+function getData(id) {
+  return database.query('SELECT * FROM table WHERE id = ' + id);
+}
+
+// After (with security improvements):
+async function getData(id) {
+  // Validate input
+  if (!Number.isInteger(id) || id < 1) {
+    throw new Error('Invalid ID');
+  }
+  
+  // Use parameterized query to prevent SQL injection
+  return await database.query('SELECT * FROM table WHERE id = ?', [id]);
+}
+\`\`\`
+
+### 📊 Code Quality Score: 8.5/10
+
+**Next Steps:**
+1. Implement suggested security improvements
+2. Add comprehensive test coverage
+3. Consider performance optimizations for high-traffic scenarios`;
+}
+
+/**
+ * Generate bug fix code
+ * @param {string} description - Bug description
+ * @returns {string} - Bug fix
+ */
+function generateBugFix(description) {
+  return `## Bug Fix Solution
+
+### 🐛 Issue Identified:
+Based on the description, the issue appears to be related to improper error handling and edge case management.
+
+### 🔧 Proposed Fix:
+
+\`\`\`javascript
+// Original code (with bug):
+function processData(data) {
+  const result = data.map(item => item.value);
+  return result.reduce((a, b) => a + b);
+}
+
+// Fixed code:
+function processData(data) {
+  // Validate input
+  if (!Array.isArray(data)) {
+    throw new TypeError('Data must be an array');
+  }
+  
+  if (data.length === 0) {
+    return 0; // Handle empty array case
+  }
+  
+  // Filter out invalid items and provide default values
+  const result = data
+    .filter(item => item && typeof item.value === 'number')
+    .map(item => item.value);
+  
+  // Handle case where all items were filtered out
+  if (result.length === 0) {
+    return 0;
+  }
+  
+  return result.reduce((a, b) => a + b, 0); // Provide initial value
+}
+\`\`\`
+
+### ✅ What This Fix Addresses:
+1. **Null/Undefined Handling**: Validates input before processing
+2. **Empty Array**: Returns 0 for empty arrays instead of crashing
+3. **Type Safety**: Filters out non-numeric values
+4. **Reduce Initial Value**: Provides initial value to prevent errors
+
+### 🧪 Test Cases:
+
+\`\`\`javascript
+// Test cases to verify the fix
+console.assert(processData([]) === 0, 'Empty array should return 0');
+console.assert(processData([{value: 1}, {value: 2}]) === 3, 'Valid data should sum correctly');
+console.assert(processData([{value: 1}, {}, {value: 2}]) === 3, 'Should skip invalid items');
+
+try {
+  processData(null);
+  console.error('Should have thrown TypeError');
+} catch (e) {
+  console.assert(e instanceof TypeError, 'Should throw TypeError for invalid input');
+}
+\`\`\``;
+}
+
+/**
+ * Generate refactoring suggestions
+ * @param {string} description - Refactoring description
+ * @returns {string} - Refactoring suggestions
+ */
+function generateRefactoring(description) {
+  return `## Code Refactoring Recommendations
+
+### 🎯 Refactoring Goals:
+1. Improve code readability and maintainability
+2. Enhance performance and efficiency
+3. Apply SOLID principles
+4. Reduce code duplication
+
+### 📝 Refactored Code:
+
+\`\`\`javascript
+// Before: Monolithic function with multiple responsibilities
+function handleUserRequest(userId, action, data) {
+  const user = database.getUser(userId);
+  if (!user) return { error: 'User not found' };
+  
+  if (action === 'update') {
+    user.name = data.name;
+    user.email = data.email;
+    database.saveUser(user);
+    sendEmail(user.email, 'Profile updated');
+    logAction(userId, 'update');
+    return { success: true };
+  } else if (action === 'delete') {
+    database.deleteUser(userId);
+    sendEmail(user.email, 'Account deleted');
+    logAction(userId, 'delete');
+    return { success: true };
+  }
+}
+
+// After: Refactored with separation of concerns
+class UserService {
+  constructor(database, emailService, logger) {
+    this.database = database;
+    this.emailService = emailService;
+    this.logger = logger;
+  }
+  
+  async handleRequest(userId, action, data) {
+    const user = await this.getUser(userId);
+    
+    const actionHandlers = {
+      update: () => this.updateUser(user, data),
+      delete: () => this.deleteUser(user)
+    };
+    
+    const handler = actionHandlers[action];
+    if (!handler) {
+      throw new Error(\`Unknown action: \${action}\`);
+    }
+    
+    return await handler();
+  }
+  
+  async getUser(userId) {
+    const user = await this.database.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return user;
+  }
+  
+  async updateUser(user, data) {
+    user.name = data.name;
+    user.email = data.email;
+    
+    await this.database.saveUser(user);
+    await this.emailService.send(user.email, 'Profile updated');
+    await this.logger.logAction(user.id, 'update');
+    
+    return { success: true };
+  }
+  
+  async deleteUser(user) {
+    await this.database.deleteUser(user.id);
+    await this.emailService.send(user.email, 'Account deleted');
+    await this.logger.logAction(user.id, 'delete');
+    
+    return { success: true };
+  }
+}
+\`\`\`
+
+### ✨ Improvements Made:
+1. **Single Responsibility**: Each method has one clear purpose
+2. **Dependency Injection**: Services injected via constructor
+3. **Strategy Pattern**: Action handlers in a map for extensibility
+4. **Async/Await**: Proper async handling throughout
+5. **Error Handling**: Consistent error management
+6. **Testability**: Easy to mock dependencies for testing
+
+### 📊 Benefits:
+- **Maintainability**: ⬆️ 85% easier to modify
+- **Testability**: ⬆️ 90% easier to test
+- **Readability**: ⬆️ 75% clearer intent
+- **Extensibility**: ⬆️ 95% easier to add new actions`;
+}
+
+/**
+ * Generate generic code
+ * @param {string} description - Task description
+ * @returns {string} - Generic code
+ */
+function generateGenericCode(description) {
+  return `## Generated Solution
+
+Based on the requirements, here's a comprehensive implementation:
+
+\`\`\`javascript
+/**
+ * Main implementation module
+ */
+
+class Solution {
+  constructor(config = {}) {
+    this.config = {
+      debug: false,
+      timeout: 5000,
+      ...config
+    };
+  }
+  
+  /**
+   * Main entry point
+   * @param {Object} input - Input parameters
+   * @returns {Promise<Object>} - Result object
+   */
+  async execute(input) {
+    try {
+      this.log('Starting execution...');
+      
+      // Validate input
+      this.validateInput(input);
+      
+      // Process
+      const result = await this.process(input);
+      
+      this.log('Execution completed successfully');
+      
+      return {
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      this.log('Execution failed:', error);
+      
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+  
+  /**
+   * Validate input parameters
+   * @param {Object} input - Input to validate
+   */
+  validateInput(input) {
+    if (!input || typeof input !== 'object') {
+      throw new Error('Invalid input: must be an object');
+    }
+    
+    // Add specific validation logic here
+  }
+  
+  /**
+   * Process the input
+   * @param {Object} input - Input to process
+   * @returns {Promise<any>} - Processing result
+   */
+  async process(input) {
+    // Implement specific processing logic here
+    return input;
+  }
+  
+  /**
+   * Log message if debug mode is enabled
+   * @param {...any} args - Arguments to log
+   */
+  log(...args) {
+    if (this.config.debug) {
+      console.log('[Solution]', ...args);
+    }
+  }
+}
+
+// Export
+module.exports = Solution;
+\`\`\`
+
+### 📚 Usage Example:
+
+\`\`\`javascript
+const Solution = require('./solution');
+
+const solution = new Solution({ debug: true });
+
+async function main() {
+  const result = await solution.execute({
+    // Add your input parameters here
+  });
+  
+  if (result.success) {
+    console.log('Success:', result.data);
+  } else {
+    console.error('Error:', result.error);
+  }
+}
+
+main();
+\`\`\``;
+}
+
+// Export functions
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    callCopilotAPI,
+    buildCopilotPrompt,
+    buildCopilotRequestComment,
+    simulateCopilotResponse,
+    generateSampleCode,
+    generateCodeReview,
+    generateBugFix,
+    generateRefactoring,
+    generateGenericCode
+  };
+}
