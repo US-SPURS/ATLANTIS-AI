@@ -1,0 +1,136 @@
+name: Project Board Automation
+on:
+  issues:
+    types: [opened, labeled, unlabeled, closed, reopened]
+  pull_request:
+    types: [opened, closed, reopened]
+
+permissions:
+  issues: write
+  pull-requests: write
+  repository-projects: write
+
+jobs:
+  auto-add-to-project:
+    name: Add to Project Board
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Add Issue to Project
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/us-spurs/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-move-columns:
+    name: Auto-Move Based on Labels
+    runs-on: ubuntu-latest
+    if: github.event.action == 'labeled' || github.event.action == 'unlabeled'
+    steps:
+      - name: Move to Appropriate Column
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue || context.payload.pull_request;
+            const labels = issue.labels.map(l => l.name);
+            
+            // Define column mapping
+            const columnMapping = {
+              'status:intake': 'Intake Queue',
+              'status:ai-assigned': 'AI Assignment',
+              'status:ai-responded': 'In Progress',
+              'status:review-required': 'Review Required',
+              'status:integration': 'Integration',
+              'status:completed': 'Completed'
+            };
+            
+            // Find matching status label
+            let targetColumn = null;
+            for (const [label, column] of Object.entries(columnMapping)) {
+              if (labels.includes(label)) {
+                targetColumn = column;
+                break;
+              }
+            }
+            
+            if (targetColumn) {
+              console.log(`Moving issue #${issue.number} to column: ${targetColumn}`);
+              // Note: Actual project card movement requires GitHub Projects API v2
+              // This would be implemented with GraphQL mutations
+            }
+
+  auto-assign-priority:
+    name: Auto-Assign Based on Priority
+    runs-on: ubuntu-latest
+    if: github.event.action == 'labeled'
+    steps:
+      - name: Process Priority Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const label = context.payload.label;
+            
+            if (label.name.startsWith('priority:')) {
+              const priority = label.name.split(':')[1];
+              
+              // Add priority emoji to title if not already present
+              if (!issue.title.match(/^[🔴🟠🟡🟢]/)) {
+                const emojiMap = {
+                  'critical': '🔴',
+                  'high': '🟠',
+                  'normal': '🟡',
+                  'low': '🟢'
+                };
+                
+                const emoji = emojiMap[priority] || '⚪';
+                const newTitle = `${emoji} ${issue.title}`;
+                
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  title: newTitle
+                });
+              }
+              
+              // For critical priority, add notification
+              if (priority === 'critical') {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: `🚨 **CRITICAL PRIORITY TASK**\n\nThis issue has been marked as critical priority and will be processed immediately by all available AI systems.\n\n**Expedited Processing Active**`
+                });
+              }
+            }
+
+  auto-close-completed:
+    name: Auto-Close When Completed
+    runs-on: ubuntu-latest
+    if: github.event.action == 'labeled' && github.event.label.name == 'status:completed'
+    steps:
+      - name: Close Completed Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            
+            // Add completion comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `## 🎉 Task Completed\n\nThis task has been marked as completed and will be automatically closed.\n\n**Completion Summary:**\n- AI systems engaged: ${issue.labels.filter(l => l.name.startsWith('ai:')).map(l => l.name.replace('ai:', '')).join(', ')}\n- Total processing time: Calculated from timestamps\n- Status: Successfully completed\n\n---\n*Auto-closing in 5 seconds...*`
+            });
+            
+            // Wait 5 seconds then close
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed',
+              state_reason: 'completed'
+            });
