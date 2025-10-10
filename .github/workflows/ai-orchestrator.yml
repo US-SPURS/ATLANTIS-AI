@@ -1,0 +1,594 @@
+name: AI Task Orchestrator
+on:
+  issues:
+    types: [opened, edited, labeled, reopened]
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: write
+  actions: write
+  attestations: write
+  checks: write
+  deployments: write
+  discussions: write
+  models: write
+  packages: write
+  pages: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+  id-token: write
+
+jobs:
+  detect-and-route:
+    name: Detect AI Mentions and Route Tasks
+    runs-on: ubuntu-latest
+    outputs:
+      ai_mentions: ${{ steps.parse.outputs.ai_mentions }}
+      task_type: ${{ steps.parse.outputs.task_type }}
+      issue_number: ${{ steps.parse.outputs.issue_number }}
+      
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm install @actions/core @actions/github @anthropic-ai/sdk openai axios markdown-it
+
+      - name: Parse Issue/Comment for AI Mentions
+        id: parse
+        uses: actions/github-script@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Load the AI router script
+            const routerScript = fs.readFileSync('.github/scripts/ai-router.js', 'utf8');
+            eval(routerScript);
+            
+            const context = github.context;
+            const payload = context.payload;
+            
+            let bodyText = '';
+            let issueNumber = null;
+            let eventType = context.eventName;
+            
+            // Extract body text based on event type
+            if (eventType === 'issues') {
+              bodyText = payload.issue.body || '';
+              issueNumber = payload.issue.number;
+            } else if (eventType === 'issue_comment') {
+              bodyText = payload.comment.body || '';
+              issueNumber = payload.issue.number;
+            } else if (eventType === 'pull_request') {
+              bodyText = payload.pull_request.body || '';
+              issueNumber = payload.pull_request.number;
+            } else if (eventType === 'pull_request_review_comment') {
+              bodyText = payload.comment.body || '';
+              issueNumber = payload.pull_request.number;
+            }
+            
+            // Parse AI mentions using regex
+            const aiMentions = parseAIMentions(bodyText);
+            const taskType = determineTaskType(payload, bodyText);
+            
+            // Set outputs
+            core.setOutput('ai_mentions', JSON.stringify(aiMentions));
+            core.setOutput('task_type', taskType);
+            core.setOutput('issue_number', issueNumber);
+            
+            console.log('Detected AI mentions:', aiMentions);
+            console.log('Task type:', taskType);
+            console.log('Issue number:', issueNumber);
+            
+            // Helper function to parse AI mentions
+            function parseAIMentions(text) {
+              const mentions = {
+                copilot: /@copilot(?:-(\w+))?/gi.test(text),
+                claude: /@claude(?:-(\w+))?/gi.test(text),
+                chatgpt: /@chatgpt(?:-(\w+))?/gi.test(text),
+                monica: /@monica(?:-(\w+))?/gi.test(text),
+                multi: /@multi/gi.test(text) || /@all-ai/gi.test(text)
+              };
+              
+              // Extract specific commands
+              const copilotMatch = text.match(/@copilot-(\w+)/i);
+              const claudeMatch = text.match(/@claude-(\w+)/i);
+              const chatgptMatch = text.match(/@chatgpt-(\w+)/i);
+              
+              if (copilotMatch) mentions.copilotCommand = copilotMatch[1];
+              if (claudeMatch) mentions.claudeCommand = claudeMatch[1];
+              if (chatgptMatch) mentions.chatgptCommand = chatgptMatch[1];
+              
+              return mentions;
+            }
+            
+            // Helper function to determine task type from labels and content
+            function determineTaskType(payload, text) {
+              const labels = payload.issue?.labels || payload.pull_request?.labels || [];
+              const labelNames = labels.map(l => l.name.toLowerCase());
+              
+              if (labelNames.includes('type:code-generation')) return 'code-generation';
+              if (labelNames.includes('type:analysis')) return 'technical-analysis';
+              if (labelNames.includes('type:content')) return 'content-creation';
+              if (labelNames.includes('type:code-review')) return 'code-review';
+              if (labelNames.includes('type:architecture')) return 'architecture-design';
+              if (labelNames.includes('type:bug')) return 'bug-investigation';
+              if (labelNames.includes('type:documentation')) return 'documentation';
+              
+              // Fallback: detect from content
+              if (text.match(/generate|create|build|implement/i)) return 'code-generation';
+              if (text.match(/analyze|review|assess|evaluate/i)) return 'technical-analysis';
+              if (text.match(/document|write|explain|guide/i)) return 'content-creation';
+              
+              return 'general';
+            }
+
+      - name: Add Initial Processing Comment
+        if: steps.parse.outputs.ai_mentions != '{}'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.parse.outputs.issue_number }};
+            const aiMentions = JSON.parse('${{ steps.parse.outputs.ai_mentions }}');
+            
+            let mentionedAIs = [];
+            if (aiMentions.copilot) mentionedAIs.push('🤖 GitHub Copilot');
+            if (aiMentions.claude) mentionedAIs.push('🧠 Claude');
+            if (aiMentions.chatgpt) mentionedAIs.push('💬 ChatGPT');
+            if (aiMentions.monica) mentionedAIs.push('✨ Monica');
+            if (aiMentions.multi) mentionedAIs.push('🔄 Multi-AI Collaboration');
+            
+            if (mentionedAIs.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `## 🚀 AI Task Processing Initiated\n\n**Engaged AI Systems:**\n${mentionedAIs.map(ai => `- ${ai}`).join('\n')}\n\n**Status:** Processing your request...\n\n*Estimated completion: 2-5 minutes*\n\n---\n*This is an automated message from the US-SPURS AI Orchestration System*`
+              });
+            }
+
+  call-copilot:
+    name: GitHub Copilot Processing
+    needs: detect-and-route
+    if: contains(fromJSON(needs.detect-and-route.outputs.ai_mentions).copilot, true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Process with Copilot
+        run: |
+          echo "GitHub Copilot integration requires GitHub Copilot API access"
+          echo "This step would integrate with Copilot Workspace or Copilot Chat API"
+          echo "For now, this serves as a placeholder for native Copilot integration"
+          
+      - name: Post Copilot Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `### 🤖 GitHub Copilot Response\n\n**Status:** Ready for collaboration\n\n*Note: GitHub Copilot works best through direct IDE integration. For code generation tasks, developers should use Copilot in their local environment with this issue as context.*\n\n**Recommended Actions:**\n1. Open this repository in VS Code with Copilot enabled\n2. Reference this issue number in Copilot Chat: \`@workspace #${issueNumber}\`\n3. Use Copilot to generate code based on requirements\n4. Submit PR with generated code for review\n\n---\n*GitHub Copilot Integration Active*`
+            });
+
+  call-claude:
+    name: Claude AI Processing
+    needs: detect-and-route
+    if: contains(fromJSON(needs.detect-and-route.outputs.ai_mentions).claude, true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          npm install @anthropic-ai/sdk @actions/core @actions/github
+
+      - name: Build Context for Claude
+        id: build-context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const contextBuilder = fs.readFileSync('.github/scripts/context-builder.js', 'utf8');
+            eval(contextBuilder);
+            
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const taskType = '${{ needs.detect-and-route.outputs.task_type }}';
+            
+            // Fetch issue details
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Fetch comments
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Build comprehensive context
+            const contextData = buildClaudeContext(issue.data, comments.data, taskType);
+            
+            // Save context to file
+            fs.writeFileSync('/tmp/claude-context.json', JSON.stringify(contextData, null, 2));
+            
+            core.setOutput('context_file', '/tmp/claude-context.json');
+            
+            return contextData;
+
+      - name: Call Claude API
+        id: claude-api
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          node .github/scripts/call-claude.js \
+            --context-file /tmp/claude-context.json \
+            --task-type "${{ needs.detect-and-route.outputs.task_type }}" \
+            --output-file /tmp/claude-response.json
+
+      - name: Format Claude Response
+        id: format-response
+        run: |
+          node .github/scripts/response-formatter.js \
+            --input-file /tmp/claude-response.json \
+            --ai-name "Claude" \
+            --output-file /tmp/formatted-response.md
+
+      - name: Post Claude Response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const response = fs.readFileSync('/tmp/formatted-response.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: response
+            });
+
+      - name: Update Labels Based on Response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const responseData = JSON.parse(fs.readFileSync('/tmp/claude-response.json', 'utf8'));
+            
+            // Add status label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['ai:claude-completed', 'status:ai-responded']
+            });
+            
+            // Remove intake label
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                name: 'status:intake'
+              });
+            } catch (error) {
+              console.log('Intake label not found or already removed');
+            }
+
+  call-chatgpt:
+    name: ChatGPT Processing
+    needs: detect-and-route
+    if: contains(fromJSON(needs.detect-and-route.outputs.ai_mentions).chatgpt, true)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          npm install openai @actions/core @actions/github
+
+      - name: Build Context for ChatGPT
+        id: build-context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const contextBuilder = fs.readFileSync('.github/scripts/context-builder.js', 'utf8');
+            eval(contextBuilder);
+            
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const taskType = '${{ needs.detect-and-route.outputs.task_type }}';
+            
+            // Fetch issue details
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Fetch comments
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Build comprehensive context
+            const contextData = buildChatGPTContext(issue.data, comments.data, taskType);
+            
+            // Save context to file
+            fs.writeFileSync('/tmp/chatgpt-context.json', JSON.stringify(contextData, null, 2));
+            
+            core.setOutput('context_file', '/tmp/chatgpt-context.json');
+            
+            return contextData;
+
+      - name: Call ChatGPT API
+        id: chatgpt-api
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          node .github/scripts/call-chatgpt.js \
+            --context-file /tmp/chatgpt-context.json \
+            --task-type "${{ needs.detect-and-route.outputs.task_type }}" \
+            --output-file /tmp/chatgpt-response.json
+
+      - name: Format ChatGPT Response
+        id: format-response
+        run: |
+          node .github/scripts/response-formatter.js \
+            --input-file /tmp/chatgpt-response.json \
+            --ai-name "ChatGPT" \
+            --output-file /tmp/formatted-response.md
+
+      - name: Post ChatGPT Response
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const response = fs.readFileSync('/tmp/formatted-response.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: response
+            });
+
+      - name: Update Labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['ai:chatgpt-completed', 'status:ai-responded']
+            });
+            
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                name: 'status:intake'
+              });
+            } catch (error) {
+              console.log('Intake label not found');
+            }
+
+  multi-ai-synthesis:
+    name: Multi-AI Response Synthesis
+    needs: [detect-and-route, call-claude, call-chatgpt]
+    if: |
+      always() && 
+      contains(fromJSON(needs.detect-and-route.outputs.ai_mentions).multi, true) &&
+      (needs.call-claude.result == 'success' || needs.call-chatgpt.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          npm install @anthropic-ai/sdk @actions/core @actions/github
+
+      - name: Collect All AI Responses
+        id: collect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            
+            // Fetch all comments
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            // Filter AI responses (posted in last 10 minutes)
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+            const aiResponses = comments.data.filter(comment => {
+              const commentDate = new Date(comment.created_at);
+              return commentDate > tenMinutesAgo && 
+                     (comment.body.includes('### 🧠 Claude') || 
+                      comment.body.includes('### 💬 ChatGPT') ||
+                      comment.body.includes('### 🤖 GitHub Copilot'));
+            });
+            
+            core.setOutput('response_count', aiResponses.length);
+            
+            // Save responses for synthesis
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/ai-responses.json', JSON.stringify(aiResponses, null, 2));
+            
+            return aiResponses.length;
+
+      - name: Synthesize Responses with Claude
+        if: steps.collect.outputs.response_count > 1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          node .github/scripts/synthesize-responses.js \
+            --responses-file /tmp/ai-responses.json \
+            --output-file /tmp/synthesis.md
+
+      - name: Post Synthesis
+        if: steps.collect.outputs.response_count > 1
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const synthesis = fs.readFileSync('/tmp/synthesis.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `## 🔄 Multi-AI Synthesis\n\n${synthesis}\n\n---\n*This synthesis combines insights from multiple AI systems to provide a comprehensive response.*`
+            });
+            
+            // Add synthesis label
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['ai:multi-synthesis-complete']
+            });
+
+  finalize-task:
+    name: Finalize Task Processing
+    needs: [detect-and-route, call-copilot, call-claude, call-chatgpt, multi-ai-synthesis]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Project Board
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            
+            // Fetch issue to get current labels
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            const labels = issue.data.labels.map(l => l.name);
+            
+            // Determine if all requested AIs have responded
+            const aiMentions = JSON.parse('${{ needs.detect-and-route.outputs.ai_mentions }}');
+            let allCompleted = true;
+            
+            if (aiMentions.claude && !labels.includes('ai:claude-completed')) allCompleted = false;
+            if (aiMentions.chatgpt && !labels.includes('ai:chatgpt-completed')) allCompleted = false;
+            
+            if (allCompleted) {
+              // Move to review stage
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['status:review-required']
+              });
+              
+              // Remove in-progress label
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  name: 'status:ai-responded'
+                });
+              } catch (error) {
+                console.log('Label not found');
+              }
+              
+              // Post completion message
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `## ✅ AI Processing Complete\n\nAll requested AI systems have responded. This task is now ready for human review.\n\n**Next Steps:**\n- Review AI responses above\n- Validate recommendations\n- Implement suggested solutions\n- Close issue when complete\n\n---\n*Task moved to Review stage*`
+              });
+            }
+
+      - name: Generate Metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ needs.detect-and-route.outputs.issue_number }};
+            const taskType = '${{ needs.detect-and-route.outputs.task_type }}';
+            
+            // Calculate processing time
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+            
+            const createdAt = new Date(issue.data.created_at);
+            const lastComment = comments.data[comments.data.length - 1];
+            const completedAt = lastComment ? new Date(lastComment.created_at) : new Date();
+            
+            const processingTimeMinutes = Math.round((completedAt - createdAt) / 1000 / 60);
+            
+            console.log(`Task Type: ${taskType}`);
+            console.log(`Processing Time: ${processingTimeMinutes} minutes`);
+            console.log(`AI Responses: ${comments.data.filter(c => c.body.includes('###')).length}`);
