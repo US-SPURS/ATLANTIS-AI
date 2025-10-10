@@ -221,4 +221,49 @@ function extractCodeBlocks(text) {
 
 /**
  * Build routing decision
- * @param {Object} payloa
+ * @param {Object} payload - GitHub webhook payload
+ * @param {Object} mentions - Parsed AI mentions
+ * @param {string} taskType - Determined task type
+ * @returns {Object} - Routing decision object
+ */
+function buildRoutingDecision(payload, mentions, taskType) {
+  const optimal = getOptimalAIForTask(taskType);
+  const priority = calculatePriorityScore(payload);
+
+  // If specific AIs mentioned, use those; otherwise use optimal
+  const targetAIs = {
+    copilot: mentions.copilot || (optimal.primary === 'copilot'),
+    claude: mentions.claude || (optimal.primary === 'claude'),
+    chatgpt: mentions.chatgpt || (optimal.primary === 'chatgpt'),
+    monica: mentions.monica
+  };
+
+  // If multi requested, enable all
+  if (mentions.multi || optimal.primary === 'multi') {
+    targetAIs.copilot = true;
+    targetAIs.claude = true;
+    targetAIs.chatgpt = true;
+  }
+
+  return {
+    targetAIs,
+    taskType,
+    priority,
+    optimal,
+    commands: mentions.commands,
+    requiresSynthesis: Object.values(targetAIs).filter(Boolean).length > 1
+  };
+}
+
+// Export functions for use in GitHub Actions
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    parseAIMentions,
+    determineTaskType,
+    getOptimalAIForTask,
+    calculatePriorityScore,
+    extractCodeBlocks,
+    buildRoutingDecision
+  };
+}
+
