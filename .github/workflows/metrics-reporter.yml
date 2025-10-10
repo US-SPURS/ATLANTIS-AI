@@ -43,4 +43,201 @@ jobs:
               repo: context.repo.repo,
               state: 'all',
               since: oneWeekAgo.toISOString(),
-              per_page: 
+              per_page: per_page: 100
+            });
+            
+            // Calculate metrics
+            const metrics = {
+              totalTasks: issues.length,
+              tasksByType: {},
+              tasksByAI: {},
+              completedTasks: 0,
+              avgProcessingTime: 0,
+              aiResponseCount: {
+                copilot: 0,
+                claude: 0,
+                chatgpt: 0,
+                multi: 0
+              },
+              priorityBreakdown: {
+                critical: 0,
+                high: 0,
+                normal: 0,
+                low: 0
+              }
+            };
+            
+            let totalProcessingTime = 0;
+            let tasksWithProcessingTime = 0;
+            
+            for (const issue of issues) {
+              const labels = issue.labels.map(l => l.name);
+              
+              // Count by type
+              const typeLabel = labels.find(l => l.startsWith('type:'));
+              if (typeLabel) {
+                const type = typeLabel.replace('type:', '');
+                metrics.tasksByType[type] = (metrics.tasksByType[type] || 0) + 1;
+              }
+              
+              // Count by AI
+              labels.forEach(label => {
+                if (label.startsWith('ai:')) {
+                  const ai = label.replace('ai:', '').split('-')[0];
+                  metrics.tasksByAI[ai] = (metrics.tasksByAI[ai] || 0) + 1;
+                  
+                  if (label.includes('completed')) {
+                    metrics.aiResponseCount[ai] = (metrics.aiResponseCount[ai] || 0) + 1;
+                  }
+                }
+              });
+              
+              // Count completed
+              if (issue.state === 'closed' || labels.includes('status:completed')) {
+                metrics.completedTasks++;
+                
+                // Calculate processing time
+                if (issue.closed_at) {
+                  const created = new Date(issue.created_at);
+                  const closed = new Date(issue.closed_at);
+                  const processingHours = (closed - created) / (1000 * 60 * 60);
+                  totalProcessingTime += processingHours;
+                  tasksWithProcessingTime++;
+                }
+              }
+              
+              // Priority breakdown
+              const priorityLabel = labels.find(l => l.startsWith('priority:'));
+              if (priorityLabel) {
+                const priority = priorityLabel.replace('priority:', '');
+                metrics.priorityBreakdown[priority] = (metrics.priorityBreakdown[priority] || 0) + 1;
+              }
+            }
+            
+            // Calculate average processing time
+            if (tasksWithProcessingTime > 0) {
+              metrics.avgProcessingTime = (totalProcessingTime / tasksWithProcessingTime).toFixed(2);
+            }
+            
+            // Calculate completion rate
+            metrics.completionRate = metrics.totalTasks > 0 
+              ? ((metrics.completedTasks / metrics.totalTasks) * 100).toFixed(1)
+              : 0;
+            
+            core.setOutput('metrics', JSON.stringify(metrics));
+            
+            return metrics;
+
+      - name: Generate Metrics Report
+        id: report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const metrics = JSON.parse('${{ steps.metrics.outputs.metrics }}');
+            
+            // Generate markdown report
+            let report = `# 📊 Weekly AI Collaboration Metrics Report\n\n`;
+            report += `**Report Period:** ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString()} - ${new Date().toLocaleDateString()}\n\n`;
+            report += `---\n\n`;
+            
+            // Overview section
+            report += `## 📈 Overview\n\n`;
+            report += `| Metric | Value |\n`;
+            report += `|--------|-------|\n`;
+            report += `| Total Tasks | ${metrics.totalTasks} |\n`;
+            report += `| Completed Tasks | ${metrics.completedTasks} |\n`;
+            report += `| Completion Rate | ${metrics.completionRate}% |\n`;
+            report += `| Avg Processing Time | ${metrics.avgProcessingTime} hours |\n\n`;
+            
+            // Tasks by Type
+            report += `## 📋 Tasks by Type\n\n`;
+            if (Object.keys(metrics.tasksByType).length > 0) {
+              report += `| Task Type | Count | Percentage |\n`;
+              report += `|-----------|-------|------------|\n`;
+              for (const [type, count] of Object.entries(metrics.tasksByType)) {
+                const percentage = ((count / metrics.totalTasks) * 100).toFixed(1);
+                report += `| ${type} | ${count} | ${percentage}% |\n`;
+              }
+            } else {
+              report += `*No tasks recorded this week*\n`;
+            }
+            report += `\n`;
+            
+            // AI System Performance
+            report += `## 🤖 AI System Performance\n\n`;
+            report += `| AI System | Tasks Assigned | Responses Completed |\n`;
+            report += `|-----------|----------------|---------------------|\n`;
+            report += `| 🤖 GitHub Copilot | ${metrics.tasksByAI.copilot || 0} | ${metrics.aiResponseCount.copilot || 0} |\n`;
+            report += `| 🧠 Claude | ${metrics.tasksByAI.claude || 0} | ${metrics.aiResponseCount.claude || 0} |\n`;
+            report += `| 💬 ChatGPT | ${metrics.tasksByAI.chatgpt || 0} | ${metrics.aiResponseCount.chatgpt || 0} |\n`;
+            report += `| 🔄 Multi-AI | ${metrics.tasksByAI.multi || 0} | ${metrics.aiResponseCount.multi || 0} |\n\n`;
+            
+            // Priority Breakdown
+            report += `## 🎯 Priority Breakdown\n\n`;
+            report += `| Priority | Count |\n`;
+            report += `|----------|-------|\n`;
+            report += `| 🔴 Critical | ${metrics.priorityBreakdown.critical || 0} |\n`;
+            report += `| 🟠 High | ${metrics.priorityBreakdown.high || 0} |\n`;
+            report += `| 🟡 Normal | ${metrics.priorityBreakdown.normal || 0} |\n`;
+            report += `| 🟢 Low | ${metrics.priorityBreakdown.low || 0} |\n\n`;
+            
+            // Performance Insights
+            report += `## 💡 Insights & Recommendations\n\n`;
+            
+            if (metrics.completionRate < 70) {
+              report += `⚠️ **Completion rate is below target (70%).** Consider:\n`;
+              report += `- Reviewing task complexity\n`;
+              report += `- Adjusting AI routing logic\n`;
+              report += `- Increasing human review capacity\n\n`;
+            } else {
+              report += `✅ **Completion rate is healthy (${metrics.completionRate}%)**\n\n`;
+            }
+            
+            if (parseFloat(metrics.avgProcessingTime) > 48) {
+              report += `⚠️ **Average processing time is high (${metrics.avgProcessingTime} hours).** Consider:\n`;
+              report += `- Optimizing AI prompt templates\n`;
+              report += `- Implementing parallel processing for multi-AI tasks\n`;
+              report += `- Breaking down complex tasks into smaller subtasks\n\n`;
+            }
+            
+            // Most active AI
+            const mostActiveAI = Object.entries(metrics.aiResponseCount)
+              .sort((a, b) => b[1] - a[1])[0];
+            
+            if (mostActiveAI && mostActiveAI[1] > 0) {
+              report += `🏆 **Most Active AI System:** ${mostActiveAI[0]} (${mostActiveAI[1]} responses)\n\n`;
+            }
+            
+            report += `---\n\n`;
+            report += `*This report was automatically generated by the US-SPURS AI Orchestration System*\n`;
+            report += `*Next report: ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}*`;
+            
+            core.setOutput('report', report);
+            
+            return report;
+
+      - name: Create Metrics Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const report = `${{ steps.report.outputs.report }}`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📊 Weekly AI Metrics Report - ${new Date().toLocaleDateString()}`,
+              body: report,
+              labels: ['metrics', 'automated-report', 'status:completed']
+            });
+
+      - name: Post to Discussions (Optional)
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const report = `${{ steps.report.outputs.report }}`;
+            
+            // This would post to GitHub Discussions if enabled
+            console.log('Metrics report generated successfully');
+            console.log('To enable Discussions posting, configure repository discussions');
+
