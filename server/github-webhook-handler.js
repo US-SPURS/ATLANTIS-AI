@@ -5,6 +5,7 @@
 
 const crypto = require('crypto');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 
 class GitHubWebhookHandler {
   constructor(db, atlantis, secret) {
@@ -20,7 +21,13 @@ class GitHubWebhookHandler {
   }
 
   setupRoutes() {
-    this.router.post('/webhook', (req, res) => this.handleWebhook(req, res));
+    // Apply rate limiting to webhook endpoint
+    const webhookLimiter = rateLimit({
+      windowMs: 1 * 60 * 1000, // 1 minute
+      max: 30 // Max 30 webhooks per minute
+    });
+    
+    this.router.post('/webhook', webhookLimiter, (req, res) => this.handleWebhook(req, res));
   }
 
   verifySignature(payload, signature) {

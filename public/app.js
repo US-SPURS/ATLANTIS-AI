@@ -159,16 +159,27 @@ class AtlantisApp {
 
         const droppedItem = document.createElement('div');
         droppedItem.className = 'dropped-item';
-        droppedItem.innerHTML = `
-            <span>${componentNames[component]}</span>
-            <button class="remove-item" data-component="${component}">×</button>
-        `;
+        
+        // Create text nodes to prevent XSS
+        const span = document.createElement('span');
+        span.textContent = componentNames[component];
+        
+        const button = document.createElement('button');
+        button.className = 'remove-item';
+        button.dataset.component = component;
+        button.textContent = '×';
 
-        droppedItem.querySelector('.remove-item').addEventListener('click', (e) => {
+        droppedItem.appendChild(span);
+        droppedItem.appendChild(button);
+
+        button.addEventListener('click', (e) => {
             this.selectedComponents.delete(e.target.dataset.component);
             droppedItem.remove();
             if (this.selectedComponents.size === 0) {
-                dropZone.innerHTML = '<p class="drop-hint">Drag components here</p>';
+                const hint = document.createElement('p');
+                hint.className = 'drop-hint';
+                hint.textContent = 'Drag components here';
+                dropZone.appendChild(hint);
             }
         });
 
@@ -183,12 +194,20 @@ class AtlantisApp {
             
             const fileBadge = document.createElement('div');
             fileBadge.className = 'file-badge';
-            fileBadge.innerHTML = `
-                <span>📎 ${file.name}</span>
-                <button class="file-remove" data-filename="${file.name}">×</button>
-            `;
             
-            fileBadge.querySelector('.file-remove').addEventListener('click', (e) => {
+            // Create elements to prevent XSS
+            const fileText = document.createElement('span');
+            fileText.textContent = `📎 ${file.name}`;
+            
+            const removeButton = document.createElement('button');
+            removeButton.className = 'file-remove';
+            removeButton.dataset.filename = file.name;
+            removeButton.textContent = '×';
+            
+            fileBadge.appendChild(fileText);
+            fileBadge.appendChild(removeButton);
+            
+            removeButton.addEventListener('click', (e) => {
                 this.uploadedFiles = this.uploadedFiles.filter(f => f.name !== e.target.dataset.filename);
                 fileBadge.remove();
             });
@@ -516,12 +535,20 @@ class AtlantisApp {
         
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message ${type}`;
-        messageDiv.innerHTML = `
-            <div class="message-avatar">${type === 'bot' ? '🌟' : '👤'}</div>
-            <div class="message-content">
-                <p>${content}</p>
-            </div>
-        `;
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = type === 'bot' ? '🌟' : '👤';
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        
+        const messagePara = document.createElement('p');
+        messagePara.textContent = content; // Use textContent to prevent XSS
+        
+        messageContent.appendChild(messagePara);
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(messageContent);
         
         messagesDiv.appendChild(messageDiv);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;

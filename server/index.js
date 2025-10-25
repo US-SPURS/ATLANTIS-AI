@@ -78,7 +78,15 @@ const projectsIntegration = new GitHubProjectsIntegration(
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false // Allow inline scripts for demo
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // For inline scripts in demo
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "ws:", "wss:"]
+    }
+  }
 }));
 app.use(cors());
 app.use(compression());
