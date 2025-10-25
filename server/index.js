@@ -19,6 +19,8 @@ const fs = require('fs');
 const { initializeDatabase, seedSubAIAgents } = require('../scripts/init-database');
 const AtlantisAI = require('./atlantis-ai');
 const { SubAIManager } = require('./sub-ai-agents');
+const GitHubWebhookHandler = require('./github-webhook-handler');
+const GitHubProjectsIntegration = require('./github-projects-integration');
 
 // Initialize Express
 const app = express();
@@ -60,6 +62,19 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your_openai_ap
 // Initialize ATLANTIS and Sub-AI Manager
 const atlantis = new AtlantisAI(db, aiClients);
 const subAIManager = new SubAIManager(db, aiClients);
+
+// Initialize GitHub integrations
+const webhookHandler = new GitHubWebhookHandler(
+  db,
+  atlantis,
+  process.env.GITHUB_WEBHOOK_SECRET
+);
+
+const projectsIntegration = new GitHubProjectsIntegration(
+  process.env.GITHUB_TOKEN,
+  process.env.GITHUB_OWNER || 'US-SPURS',
+  process.env.GITHUB_REPO || 'ATLANTIS-AI'
+);
 
 // Middleware
 app.use(helmet({
@@ -112,6 +127,9 @@ const upload = multer({
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
+// GitHub webhook endpoint
+app.use('/github', webhookHandler.getRouter());
+
 // ===== API ROUTES =====
 
 // Health check
@@ -160,6 +178,14 @@ app.post('/api/tasks', async (req, res) => {
       type: 'task-created',
       data: result
     });
+
+    // Sync to GitHub Projects if enabled
+    if (process.env.GITHUB_TOKEN) {
+      const task = db.prepare('SELECT * FROM tasks WHERE task_id = ?').get(result.taskId);
+      await projectsIntegration.syncTaskToProject(task).catch(err => 
+        console.error('GitHub Projects sync error:', err)
+      );
+    }
 
     res.json(result);
   } catch (error) {
