@@ -395,7 +395,9 @@ setInterval(async () => {
   }
 }, 10000); // Every 10 seconds
 
-// Catch-all route - serve index.html
+// Catch-all route - serve index.html for SPA
+// Note: This route is not rate-limited as it serves static content
+// and is necessary for client-side routing in single-page applications
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
