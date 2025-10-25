@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATLANTIS-AI - Advanced AI Orchestration System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <span class="logo-icon">🌟</span>
+                <h1>ATLANTIS-AI</h1>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+                <button class="nav-btn" data-view="create-task">Create Task</button>
+                <button class="nav-btn" data-view="agents">AI Agents</button>
+                <button class="nav-btn" data-view="files">Files</button>
+            </nav>
+            <div class="user-info">
+                <input type="text" id="username" placeholder="GitHub Username" class="user-input">
+                <span class="status-indicator" id="connection-status">●</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Dashboard View -->
+        <section id="dashboard-view" class="view active">
+            <div class="container">
+                <h2 class="section-title">Your Tasks Dashboard</h2>
+                
+                <!-- Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="total-tasks">0</div>
+                            <div class="metric-label">Total Tasks</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="active-tasks">0</div>
+                            <div class="metric-label">Active Tasks</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">✅</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="completed-tasks">0</div>
+                            <div class="metric-label">Completed</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🤖</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="work-bots">0</div>
+                            <div class="metric-label">Work Bots</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks List -->
+                <div class="tasks-container">
+                    <h3>Your Tasks</h3>
+                    <div id="tasks-list" class="tasks-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">📝</div>
+                            <p>No tasks yet. Create your first task to get started!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Create Task View -->
+        <section id="create-task-view" class="view">
+            <div class="container">
+                <h2 class="section-title">Create New Task for ATLANTIS</h2>
+                
+                <div class="task-creator">
+                    <!-- Natural Language Input -->
+                    <div class="form-section">
+                        <label class="form-label">
+                            <span class="label-icon">💬</span>
+                            Describe your task in natural language
+                        </label>
+                        <textarea 
+                            id="task-description" 
+                            class="text-area large" 
+                            placeholder="Example: I need to build a REST API for user authentication with JWT tokens, integrated with PostgreSQL database, including comprehensive unit tests and documentation..."
+                            rows="6"></textarea>
+                    </div>
+
+                    <!-- Task Title -->
+                    <div class="form-section">
+                        <label class="form-label">
+                            <span class="label-icon">📌</span>
+                            Task Title
+                        </label>
+                        <input 
+                            type="text" 
+                            id="task-title" 
+                            class="text-input" 
+                            placeholder="Brief title for your task">
+                    </div>
+
+                    <!-- Drag and Drop Components -->
+                    <div class="form-section">
+                        <label class="form-label">
+                            <span class="label-icon">🎯</span>
+                            Drag Components to Include
+                        </label>
+                        <div class="drag-container">
+                            <div class="drag-source">
+                                <h4>Available Components</h4>
+                                <div class="draggable-items">
+                                    <div class="drag-item" draggable="true" data-component="frontend">
+                                        <span class="drag-icon">🎨</span>
+                                        <span>Frontend UI</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="backend">
+                                        <span class="drag-icon">⚙️</span>
+                                        <span>Backend API</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="database">
+                                        <span class="drag-icon">🗄️</span>
+                                        <span>Database</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="authentication">
+                                        <span class="drag-icon">🔐</span>
+                                        <span>Authentication</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="testing">
+                                        <span class="drag-icon">🧪</span>
+                                        <span>Testing Suite</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="documentation">
+                                        <span class="drag-icon">📚</span>
+                                        <span>Documentation</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="deployment">
+                                        <span class="drag-icon">🚀</span>
+                                        <span>Deployment</span>
+                                    </div>
+                                    <div class="drag-item" draggable="true" data-component="security">
+                                        <span class="drag-icon">🛡️</span>
+                                        <span>Security Audit</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="drag-target" id="selected-components">
+                                <h4>Selected Components</h4>
+                                <div class="drop-zone" id="drop-zone">
+                                    <p class="drop-hint">Drag components here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Details -->
+                    <div class="form-row">
+                        <div class="form-section half">
+                            <label class="form-label">
+                                <span class="label-icon">📅</span>
+                                Timeline
+                            </label>
+                            <input 
+                                type="text" 
+                                id="task-timeline" 
+                                class="text-input" 
+                                placeholder="e.g., 2 weeks">
+                        </div>
+                        <div class="form-section half">
+                            <label class="form-label">
+                                <span class="label-icon">⚡</span>
+                                Priority
+                            </label>
+                            <select id="task-priority" class="select-input">
+                                <option value="low">Low</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Desired Outcomes -->
+                    <div class="form-section">
+                        <label class="form-label">
+                            <span class="label-icon">🎯</span>
+                            Desired Outcomes
+                        </label>
+                        <textarea 
+                            id="task-outcomes" 
+                            class="text-area" 
+                            placeholder="What success looks like for this task..."
+                            rows="3"></textarea>
+                    </div>
+
+                    <!-- Available Resources -->
+                    <div class="form-section">
+                        <label class="form-label">
+                            <span class="label-icon">📦</span>
+                            Available Resources
+                        </label>
+                        <textarea 
+                            id="task-resources" 
+                            class="text-area" 
+                            placeholder="List any existing code, documentation, APIs, or resources ATLANTIS should know about..."
+                            rows="3"></textarea>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="form-section">
+                        <label class="form-label">
+                            <span class="label-icon">📎</span>
+                            Upload Context Files
+                        </label>
+                        <div class="file-upload-area" id="file-upload-area">
+                            <input type="file" id="file-input" multiple hidden>
+                            <div class="upload-placeholder">
+                                <span class="upload-icon">📁</span>
+                                <p>Click or drag files here to upload</p>
+                                <p class="upload-hint">PDF, TXT, MD, JSON, CSV, ZIP</p>
+                            </div>
+                            <div id="uploaded-files" class="uploaded-files"></div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="form-actions">
+                        <button id="submit-task" class="btn btn-primary btn-large">
+                            <span class="btn-icon">🚀</span>
+                            Submit to ATLANTIS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Agents View -->
+        <section id="agents-view" class="view">
+            <div class="container">
+                <h2 class="section-title">Sub-AI Agents Status</h2>
+                <div id="agents-grid" class="agents-grid">
+                    <!-- Agents will be populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Files View -->
+        <section id="files-view" class="view">
+            <div class="container">
+                <h2 class="section-title">Uploaded Files</h2>
+                <div id="files-list" class="files-list">
+                    <!-- Files will be listed here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Task Detail Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Task Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Task details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ATLANTIS Chat Widget -->
+    <div class="chat-widget" id="chat-widget">
+        <div class="chat-header">
+            <span class="chat-icon">🌟</span>
+            <span>Chat with ATLANTIS</span>
+            <button class="chat-toggle" id="chat-toggle">−</button>
+        </div>
+        <div class="chat-body" id="chat-body">
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-message bot">
+                    <div class="message-avatar">🌟</div>
+                    <div class="message-content">
+                        <p>Hello! I'm ATLANTIS, your master AI coordinator. How can I help you today?</p>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    id="chat-input" 
+                    class="chat-input" 
+                    placeholder="Ask ATLANTIS anything...">
+                <button id="chat-send" class="chat-send">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
