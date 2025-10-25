@@ -12,6 +12,10 @@ class GitHubWebhookHandler {
     this.atlantis = atlantis;
     this.secret = secret;
     this.router = express.Router();
+    
+    // Note: For production, use express.json({ verify: ... }) to capture raw body
+    // for signature verification before parsing
+    
     this.setupRoutes();
   }
 

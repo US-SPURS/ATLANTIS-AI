@@ -1,6 +1,10 @@
 /**
  * GitHub Projects Integration
  * Syncs ATLANTIS tasks with GitHub Projects
+ * 
+ * Note: This uses Projects v1 API which is being deprecated.
+ * Future versions should migrate to Projects v2 (GraphQL API).
+ * See: https://docs.github.com/en/issues/planning-and-tracking-with-projects
  */
 
 const { Octokit } = require('@octokit/rest');
@@ -91,19 +95,18 @@ class GitHubProjectsIntegration {
 
   /**
    * Move task card to appropriate column
+   * Note: This is a placeholder for future implementation.
+   * Requires tracking card IDs in the database.
    * @param {string} taskId - Task ID
    * @param {string} newStatus - New status
    */
   async moveTaskCard(taskId, newStatus) {
     if (!this.octokit) return;
 
-    try {
-      // Find card by task ID in note
-      // Move to appropriate column based on status
-      console.log(`Moving task ${taskId} to ${this.getColumnForStatus(newStatus)}`);
-    } catch (error) {
-      console.error('Error moving task card:', error.message);
-    }
+    // TODO: Implement card movement
+    // This requires storing GitHub card IDs in the database
+    // and using the Projects API to move cards between columns
+    console.log(`TODO: Move task ${taskId} to ${this.getColumnForStatus(newStatus)}`);
   }
 }
 

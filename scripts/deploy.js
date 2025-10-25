@@ -21,6 +21,12 @@ async function deploy() {
 
     // Step 2: Install production dependencies
     console.log('\n2️⃣  Installing production dependencies...');
+    const fs = require('fs');
+    const nodeModulesExists = fs.existsSync(path.join(__dirname, '../node_modules'));
+    
+    if (nodeModulesExists) {
+      console.log('   Dependencies already installed, running npm ci...');
+    }
     execSync('npm ci --production', { stdio: 'inherit' });
 
     // Step 3: Build frontend assets
