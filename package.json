@@ -1,0 +1,71 @@
+{
+  "name": "atlantis-ai",
+  "version": "1.0.0",
+  "description": "ATLANTIS AI: Advanced hierarchical AI orchestration system with master AI coordinator, specialized sub-AIs, and intelligent work bot delegation",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "build": "npm run build:client",
+    "build:client": "npm run copy:static",
+    "copy:static": "mkdir -p dist && cp -r public/* dist/",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "setup": "node scripts/setup.js",
+    "db:init": "node scripts/init-database.js",
+    "db:migrate": "node scripts/migrate-database.js",
+    "deploy": "node scripts/deploy.js",
+    "validate": "npm run lint && npm test"
+  },
+  "keywords": [
+    "ai",
+    "orchestration",
+    "automation",
+    "github-actions",
+    "machine-learning",
+    "collaborative-ai",
+    "atlantis"
+  ],
+  "author": "US-SPURS",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0",
+    "@anthropic-ai/sdk": "^0.27.0",
+    "@octokit/rest": "^20.1.0",
+    "openai": "^4.67.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "better-sqlite3": "^11.0.0",
+    "multer": "^1.4.5-lts.1",
+    "ws": "^8.18.0",
+    "markdown-it": "^14.1.0",
+    "axios": "^1.7.0",
+    "uuid": "^10.0.0",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "jest": "^29.7.0",
+    "eslint": "^8.57.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/US-SPURS/ATLANTIS-AI.git"
+  },
+  "homepage": "https://us-spurs.github.io/ATLANTIS-AI"
+}
